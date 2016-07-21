@@ -29,14 +29,17 @@ namespace proctrl {
     }
 
     int Process::start() {
-        int retCode = 0;
+        //judge whether the process has been started and not exited
+        if(state != Initial && !Process::exited()) {
+            return -1;
+        }
         /* get the uid of the run-as user */
-        uid_t uid = 0;	/* run as root if the specified user is invalid */
+        uid_t uid = 0;
         struct passwd * pwe = getpwnam (params.user.c_str());
         if (pwe != NULL) {
             uid = pwe->pw_uid;
         } else {
-            retCode =  -3;
+            return -2;
         }
 
         string scriptFile = params.workDir + "/" + params.scriptFile;
@@ -45,14 +48,10 @@ namespace proctrl {
         struct stat st;
         if(stat(scriptFile.c_str(), &st) == 0) {
             if(!(st.st_mode & S_IXUSR) || st.st_uid != uid) {
-                retCode = -2;
+                return -3;
             }
         } else {
-            retCode = -1;
-        }
-
-        if(retCode < 0) {
-            return retCode;
+            return -4;
         }
 
         /* prepare the redirection channels */
@@ -60,15 +59,12 @@ namespace proctrl {
         int opipe [2] = {-1,-1};
         if (params.redirectIO) {
             if (pipe (ipipe) == -1) {
-                unlink:
-                unlink (scriptFile.c_str());
                 return 0;	/* do not fail the job, just try later */
             }
             if (pipe (opipe) == -1) {
                 close:
                 close (ipipe [0]);
                 close (ipipe [1]);
-                goto unlink;
             }
         }
 
@@ -133,6 +129,7 @@ namespace proctrl {
         }
         this->pid = pid;
         this->state = Active;
+        this->exitCode = 0;
         //wait a moment to wait child process.
         sleep(1);
         return 0;
@@ -149,6 +146,9 @@ namespace proctrl {
     }
 
     void Process::updateState(int options) {
+        if(this->state == Finished || this->state == Canceled) {
+            return;
+        }
         int status;
         //get latest signal of the pid.
         pid_t retPid = waitpid(this->pid, &status, options);
@@ -178,32 +178,34 @@ namespace proctrl {
      * Stop all process in the process group
      */
     void Process::stop() {
+        updateState();
         if(this->state == Active) {
             /* a negative pid forces the signal to be delivered
              * to all processes in the process group
              */
             ::kill (-pid, SIGSTOP);
-            updateState();
         }
     }
     /*
      * Continue all process in the process group
      */
     void Process::continuing() {
+        updateState();
         if(this->state == Stopped) {
             /* a negative pid forces the signal to be delivered
              * to all processes in the process group
              */
             ::kill (-pid, SIGCONT);
-            updateState();
         }
     }
     void Process::kill() {
-        /* a negative pid forces the signal to be delivered
-         * to all processes in the process group
-         */
+        updateState();
         if(this->state == Active || this->state == Stopped) {
             ::kill (-pid, SIGKILL);
+            /* close pipes */
+            close (redPipe [0]);
+            close (redPipe [1]);
+            redPipe [0] = redPipe [1] = -1;
         }
     }
 

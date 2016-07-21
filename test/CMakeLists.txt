@@ -8,7 +8,7 @@ enable_testing()
 
 add_subdirectory(googletest)
 
-set(test_SRCS processTest.cpp)
+set(test_SRCS controlTest.cpp)
 add_executable(controlTest ${test_SRCS})
 target_link_libraries(controlTest gtest proctrl)
 
