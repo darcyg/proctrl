@@ -79,15 +79,23 @@ public:
 public:
     pid_t getPid();
 
+public:
+    ssize_t input(byte* data, size_t length);
+    ssize_t getOutput(byte* data, size_t length);
+    ssize_t getErrOutput(byte* data, size_t length);
+
 private:
     void updateState(int options = (WNOHANG | WUNTRACED | WCONTINUED));
+
+    ssize_t readOutput(int& fd, byte* data, size_t length);
 
 private:
     ProcessParams params;
     ProcessState state;
     pid_t pid;	/* pid of the job process */
     int exitCode;
-    int redPipe [2];	/* pipes to redirect the job's input/output */
+    int redPipe [3];	/* pipes to redirect the job's stdin/stdout/stderr */
+
 };
 
 }

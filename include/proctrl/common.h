@@ -30,5 +30,7 @@
 #endif
 #endif
 
+//My Definitions
+typedef unsigned char byte;
 
 #endif //PROCTRL_COMMON_H
