@@ -30,6 +30,17 @@ namespace proctrl {
         redPipe[0] = redPipe[1] = redPipe[2] = -1;
     }
 
+    Process::~Process() {
+        if(!this->exited()) {
+            this->kill();
+        }
+
+        close(redPipe[0]);
+        close(redPipe[1]);
+        close(redPipe[2]);
+
+    }
+
     int Process::start() {
         //judge whether the process has been started and not exited
         if(state != Initial && !Process::exited()) {
@@ -131,6 +142,7 @@ namespace proctrl {
 
             /* execute it! ------> */
             execv (scriptFile.c_str(), argv);
+            exit (errno);
         }
 
         /* redirect stdin/stdout */

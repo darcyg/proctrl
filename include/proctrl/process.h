@@ -59,7 +59,7 @@ enum ProcessState
 class Process {
 public:
     Process(const ProcessParams& pp);
-
+    ~Process();
     //forbid copying the process
 private:
     Process(const Process&);
